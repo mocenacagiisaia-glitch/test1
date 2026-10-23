@@ -29,7 +29,7 @@ const server=http.createServer(async(req,res)=>{
   return;
  }
  if(req.method==='GET'&&req.url==='/api/status'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({connected:!!process.env.WRITING_API_KEY,model:process.env.WRITING_MODEL||'gpt-4.1-mini'}));return;}
- const paths={'/':'index.html','/app.js':'app.js','/style.css':'style.css'};
+ const paths={'/':'index.html','/app.js':'app.js','/style.css':'style.css','/workspace.css':'workspace.css'};
  if(req.method!=='GET'||!paths[req.url]){res.writeHead(404);res.end('Not found');return;}
  try{const file=paths[req.url];res.writeHead(200,{'Content-Type':file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html'});res.end(await readFile(root+file));}catch{res.writeHead(500);res.end('Unable to load app');}
 });

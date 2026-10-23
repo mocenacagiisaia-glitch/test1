@@ -26,9 +26,12 @@ export function analyze(text) {
 export function polish(text,tone='natural') {
  validate(text);
  const replacements=[[/\bin order to\b/gi,'to'],[/\bat this point in time\b/gi,'now'],[/\bdue to the fact that\b/gi,'because'],[/\bit is important to note that\s*/gi,''],[/\ba large number of\b/gi,'many'],[/\bhas the ability to\b/gi,'can'],[/\butilize\b/gi,'use'],[/\bprior to\b/gi,'before'],[/\bin conclusion,?\s*/gi,''],[/\bfurthermore,?\s*/gi,'Also, '], [/\bmoreover,?\s*/gi,'Also, ']];
- let output=text; let edits=0;
+ const protectedText=[];
+ let output=text.replace(/```[\s\S]*?```|`[^`\n]+`|"[^"\n]+"|“[^”]+”|https?:\/\/[^\s]+|\b[^\s@]+@[^\s@]+\b|\[[^\]\n]+\]/gu,match=>{protectedText.push(match);return `\uE000${protectedText.length-1}\uE001`;});
+ let edits=0;
  for(const [pattern,replacement] of replacements) output=output.replace(pattern,()=>{edits++;return replacement;});
  if(tone==='casual') for(const [a,b] of [[/\bdo not\b/gi,"don't"],[/\bcannot\b/gi,"can't"],[/\bit is\b/gi,"it's"],[/\byou are\b/gi,"you're"]]) output=output.replace(a,()=>{edits++;return b;});
  output=output.replace(/(^|[.!?]\s+)([a-z])/g,(_,a,b)=>a+b.toUpperCase());
+ output=output.replace(/\uE000(\d+)\uE001/g,(_,index)=>protectedText[Number(index)]);
  return {text:output,edits,mode:'local',note:'Local polish simplifies common phrases. For a full contextual rewrite, connect an AI provider in Settings. Review the result for meaning and accuracy.'};
 }

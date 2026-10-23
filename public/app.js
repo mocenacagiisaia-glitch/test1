@@ -1,4 +1,5 @@
 const $=id=>document.getElementById(id);
+const workspaceStyle=document.createElement('link');workspaceStyle.rel='stylesheet';workspaceStyle.href='/workspace.css';document.head.append(workspaceStyle);
 let mode='rewrite',tone='natural',resultText='',busy=false;
 let history=[];let historyEnabled=false;
 try{historyEnabled=localStorage.getItem('quill-history-enabled')==='true';history=historyEnabled?JSON.parse(localStorage.getItem('quill-history')||'[]'):[];if(!Array.isArray(history))history=[];}catch{history=[];}
@@ -28,3 +29,39 @@ $('deleteHistory').onclick=()=>{history=[];try{localStorage.removeItem('quill-hi
 document.querySelectorAll('.close-dialog').forEach(el=>el.onclick=()=>el.closest('dialog').close());
 fetch('/api/status').then(r=>r.json()).then(data=>{$('providerStatus').textContent=data.connected?`AI provider connected · ${data.model}`:'Local mode is ready. No AI provider connected.';}).catch(()=>{$('providerStatus').textContent='Could not check server connection.';});
 refreshHistory();updateCount();
+
+// Keep revision controls separate from the generated analysis view.
+const revisionTools=node('div','','revision-tools');
+const undoResult=node('button','\u21b6','icon-button');
+undoResult.title='Restore generated version';undoResult.setAttribute('aria-label',undoResult.title);
+const useResult=node('button','Use revision','secondary');
+revisionTools.append(undoResult,useResult);$('results').after(revisionTools);revisionTools.hidden=true;
+let generatedText='';
+const resultObserver=new MutationObserver(()=>{
+ const editor=$('results').firstElementChild;
+ const editable=mode==='rewrite'&&!$('results').hidden&&editor?.tagName==='DIV';
+ revisionTools.hidden=!editable;
+ if(!editable||editor.getAttribute('role')==='textbox')return;
+ generatedText=resultText;
+ editor.contentEditable='plaintext-only';editor.setAttribute('role','textbox');
+ editor.setAttribute('aria-label','Edit revised text');editor.setAttribute('aria-multiline','true');
+ editor.addEventListener('input',()=>{resultText=editor.innerText;$('copy').disabled=!resultText.trim();$('download').disabled=!resultText.trim();$('resultMeta').textContent=`${count(resultText).toLocaleString()} words · Edited revision`;});
+});
+resultObserver.observe($('results'),{childList:true,attributes:true,attributeFilter:['hidden']});
+undoResult.onclick=()=>{const editor=$('results').firstElementChild;if(!editor||busy)return;editor.textContent=generatedText;resultText=generatedText;$('copy').disabled=!resultText;$('download').disabled=!resultText;$('resultMeta').textContent=`${count(resultText).toLocaleString()} words · Generated revision restored`;};
+useResult.onclick=()=>{if(busy||!resultText.trim())return;$('input').value=resultText;updateCount();resetOutput();$('input').focus();};
+const originalSaveDraft=saveDraft;
+$('historyNav').addEventListener('click',()=>{
+ [...$('historyList').querySelectorAll('button')].forEach((button,index)=>button.addEventListener('click',()=>{
+  if(busy)return;const draft=history[index];if(!draft?.result)return;
+  setMode('rewrite');tone=draft.tone||'natural';
+  document.querySelectorAll('.tone').forEach(b=>b.classList.toggle('selected',b.dataset.tone===tone));
+  $('engine').value=draft.provider==='connected'?'connected':'local';$('engine').dispatchEvent(new Event('change'));
+  resultText=draft.result;$('results').replaceChildren(node('div',resultText));$('emptyOutput').hidden=true;$('results').hidden=false;
+  $('copy').disabled=false;$('download').disabled=false;$('resultMeta').textContent=`${count(resultText).toLocaleString()} words · Saved revision`;
+ }));
+});
+saveDraft=text=>{originalSaveDraft(text);if(!historyEnabled)return;history=history.map(h=>h.text===text?{...h,result:mode==='rewrite'?resultText:'',tone,provider:$('engine').value}:h);try{localStorage.setItem('quill-history',JSON.stringify(history));}catch{}};
+document.querySelectorAll('.tone').forEach(button=>button.addEventListener('click',()=>{if(!busy&&resultText){resetOutput();message('Tone changed. Run again for a new revision.');}}));
+$('engine').addEventListener('change',()=>{if(resultText){resetOutput();message('Engine changed. Run again for a new revision.');}});
+document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'&&!$('run').disabled&&!document.querySelector('dialog[open]')){event.preventDefault();$('run').click();}});

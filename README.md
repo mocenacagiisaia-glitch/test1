@@ -4,6 +4,22 @@ A dependency-free Node.js app for editing up to 5,000 words per request. Include
 
 ## Run
 
+### Workspace updates
+
+The writing workspace now includes editable results, restore-generated and use-revision controls, mobile draft navigation, and saved generated outputs alongside inputs when browser history is enabled. Changing tone or engine clears an outdated result. Ctrl+Enter (Command+Enter on macOS) runs the current operation.
+
+Local polish skips double-quoted text, curly double quotations, inline/fenced code, URLs, email addresses, and bracket citations. This is a conservative rule-based safeguard, not a guarantee that every citation format or factual detail is protected. Natural and professional local modes still share the same phrase rules; contextual rewriting requires a configured provider.
+
+For this Windows checkout, open PowerShell in `C:\Users\User\OneDrive\Documents\Project IS314\test1`, then run:
+
+```powershell
+$env:HOST = "127.0.0.1"
+npm test
+npm start
+```
+
+Open `http://localhost:3000`. Set `$env:PORT = "3001"` first if port 3000 is occupied. Node.js 22+ must be available in that terminal. Windows Node may not launch from a WSL 1 shell; use Windows PowerShell or a working Linux Node installation.
+
 Requires Node.js 22 or later. From `/workspace/test1`:
 
 ```sh
